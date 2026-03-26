@@ -80,7 +80,7 @@ export default async function CharitiesPage({ searchParams }: { searchParams: Pr
 
         <div className="animate-fade-in delay-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', width: '100%' }}>
           {displayCharities.map((charity: any) => (
-            <Link href={`/charities/${charity.id}`} key={charity.id} className="glass-panel" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', textDecoration: 'none', color: 'inherit', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02) translateY(-4px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) translateY(0)'}>
+            <Link href={`/charities/${charity.id}`} key={charity.id} className="glass-panel hover-scale" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
               {charity.is_featured && (
                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.25rem 1rem', background: 'var(--primary)', color: '#000', fontSize: '0.75rem', fontWeight: 600, borderBottomLeftRadius: 'var(--radius-md)' }}>
                   FEATURED
