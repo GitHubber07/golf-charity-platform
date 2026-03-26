@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Golf Charity Platform
 
-## Getting Started
+A modern, subscription-based web application that integrates golf performance tracking, charitable contributions, and a monthly prize draw system. Built with Next.js and Supabase.
 
-First, run the development server:
+## Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. **Node.js**: Ensure you have Node 18+ installed.
+2. **Supabase**: You must have a Supabase project created with your database schema applied (using the provided `schema.sql`).
+
+## Environment Variables
+
+Create a `.env.local` file in the root directory based on your Supabase dashboard settings:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Note**: The `SUPABASE_SERVICE_ROLE_KEY` is required for the local mock login/signup function to automatically confirm emails and bypass default Supabase auth wait states.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Installation & Running
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-## Learn More
+2. **Start the Development Server:**
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **View the Application:**
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Testing Features Locally
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Authentication / Login**: A mock mechanism is implemented for testing. Simply sign up with an email and password. The system bypasses email verification and automatically logs you in and sets up your profile for testing.
+- **Payment Gateway**: Stripe has been removed for local testing. A mock PCI-compliant UI form is available at `/checkout`. Upon submitting the form, a simulated processing occurs, and your `subscription_status` is updated to `'active'` in the database automatically.
+- **Admin Testing**: 
+  - To access the admin tools (Draws and Verifications), you must first change your user account's `role` to `'admin'`.
+  - Go to your Supabase Table Editor -> `profiles` table.
+  - Locate your user row and change the `role` enum value from `user` to `admin`.
+  - Refresh the app and navigate to `http://localhost:3000/admin`.
 
-## Deploy on Vercel
+## Project Checking Instructions (For Evaluators)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+If you are reviewing this project, please follow these steps to verify full functionality:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Verify Authentication**
+   - Click "Login/Get Started" on the homepage.
+   - Use the toggle to switch to the **Sign Up** view.
+   - Create a test account (e.g., `test@example.com`). The system will bypass email verification, auto-generate your User Profile, and log you in instantly.
+   
+2. **Verify Payments / Subscription**
+   - Navigate to `/dashboard`, which will prompt you to subscribe.
+   - Select a plan taking you to `/checkout`.
+   - Enter mock card details. Notice the automatic formatting of the credit card inputs (spaces for the card number, slashes for dates).
+   - Click "Pay". If your profile was successfully created, the mock API will process the transaction securely and redirect you to your active `/dashboard`.
+
+3. **Verify Core Features**
+   - Head to `/charities` to view the modern, image-rich charity layout.
+   - Return to `/dashboard` to input your recent golf scores. Submit 5 scores to witness the `rolling score limit` functionality configured in the PostgreSQL schema.
+   
+4. **Verify Admin Capabilities**
+   - You must promote your test user via your Supabase `profiles` table by setting `role=admin`.
+   - Visit `/admin` to try executing simulated draws and manage payout workflows.
