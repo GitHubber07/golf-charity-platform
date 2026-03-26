@@ -36,6 +36,32 @@ export async function addScore(formData: FormData) {
   redirect('/dashboard?updated=score')
 }
 
+export async function updateScore(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
+  const scoreId = formData.get('scoreId') as string
+  const scoreValue = parseInt(formData.get('score') as string, 10)
+  const datePlayed = formData.get('date') as string
+
+  if (isNaN(scoreValue) || scoreValue < 1 || scoreValue > 45) {
+    throw new Error('Score must be between 1 and 45')
+  }
+
+  const { error } = await supabase
+    .from('scores')
+    .update({ score: scoreValue, date_played: datePlayed })
+    .eq('id', scoreId)
+    .eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  redirect('/dashboard?updated=score')
+}
+
 export async function updateCharityPreferences(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -72,13 +98,23 @@ export async function submitWinningProof(formData: FormData) {
   if (!user) throw new Error('Not authenticated')
 
   const winningId = formData.get('winningId') as string
-  const proofUrl = formData.get('proofUrl') as string
+  const proofFile = formData.get('proofFile') as File
 
-  if (!proofUrl) throw new Error('Proof URL is required')
+  if (!proofFile || proofFile.size === 0) throw new Error('Proof file is required')
+
+  // Upload to Supabase Storage bucket 'proofs'
+  const filePath = `${user.id}/${Date.now()}-${proofFile.name.replace(/[^a-zA-Z0-9.-]/g, '')}`
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('proofs')
+    .upload(filePath, proofFile)
+
+  if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+
+  const { data: { publicUrl } } = supabase.storage.from('proofs').getPublicUrl(uploadData.path)
 
   const { error } = await supabase
     .from('winnings')
-    .update({ proof_url: proofUrl })
+    .update({ proof_url: publicUrl })
     .eq('id', winningId)
     .eq('user_id', user.id)
 

@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/server'
 
-export default function SubscribePage() {
+export default async function SubscribePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="container animate-fade-in" style={{ padding: '2rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -17,9 +20,15 @@ export default function SubscribePage() {
         <h1 className="animate-fade-in delay-1" style={{ fontSize: 'clamp(2.5rem, 6vw, 4rem)', letterSpacing: '-0.03em', marginBottom: '1rem', textAlign: 'center' }}>
           Join the <span style={{ color: 'var(--primary)' }}>Movement</span>
         </h1>
-        <p className="animate-fade-in delay-2" style={{ fontSize: '1.25rem', color: '#a1a1aa', textAlign: 'center', maxWidth: '600px', marginBottom: '4rem' }}>
+        <p className="animate-fade-in delay-2" style={{ fontSize: '1.25rem', color: '#a1a1aa', textAlign: 'center', maxWidth: '600px', marginBottom: '2rem' }}>
           Subscribe to enter the monthly prize draws and support meaningful causes with every round you play.
         </p>
+
+        {!user && (
+          <div className="animate-fade-in delay-2" style={{ padding: '1.5rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '3rem', textAlign: 'center', maxWidth: '600px', width: '100%' }}>
+            <strong>Action Required:</strong> You must first <Link href="/login" style={{ textDecoration: 'underline', fontWeight: 'bold' }}>log in or create an account</Link> to select a subscription plan.
+          </div>
+        )}
 
         <div className="animate-fade-in delay-3" style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'center', width: '100%', maxWidth: '900px' }}>
           
@@ -38,7 +47,7 @@ export default function SubscribePage() {
                 <span style={{ color: 'var(--primary)' }}>✓</span> Mandatory 10% minimum charity contribution
               </li>
             </ul>
-            <Link href="/checkout?plan=monthly" className="btn btn-secondary" style={{ width: '100%', textAlign: 'center', padding: '1rem' }}>
+            <Link href={user ? "/checkout?plan=monthly" : "/login"} className="btn btn-secondary" style={{ width: '100%', textAlign: 'center', padding: '1rem', cursor: user ? 'pointer' : 'not-allowed', opacity: user ? 1 : 0.7 }}>
               Select Monthly
             </Link>
           </div>
@@ -62,7 +71,7 @@ export default function SubscribePage() {
                 <span style={{ color: 'var(--primary)' }}>✓</span> <strong>Save $30 annually</strong> (2 months free)
               </li>
             </ul>
-            <Link href="/checkout?plan=yearly" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '1rem', color: '#000' }}>
+            <Link href={user ? "/checkout?plan=yearly" : "/login"} className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '1rem', color: '#000', cursor: user ? 'pointer' : 'not-allowed', opacity: user ? 1 : 0.7 }}>
               Select Annual
             </Link>
           </div>

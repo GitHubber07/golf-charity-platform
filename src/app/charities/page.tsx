@@ -3,37 +3,46 @@ import Link from 'next/link'
 
 export const revalidate = 60 // Revalidate every minute
 
-export default async function CharitiesPage() {
+export default async function CharitiesPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
+  const params = await searchParams
+  const q = params?.q || ''
+  const sort = params?.sort || 'featured'
+
   const supabase = await createClient()
 
-  const { data: charities } = await supabase
+  let query = supabase
     .from('charities')
     .select('*')
     .eq('active', true)
-    .order('is_featured', { ascending: false })
-    .order('name', { ascending: true })
 
-  // Ensure there are some fallback mock charities just in case DB is empty for the assignment demonstration
-  const displayCharities = charities?.length ? charities : [
-    {
-      id: 'mock-1',
-      name: 'Global Clean Water Initiative',
-      description: 'Providing clean and safe drinking water to developing communities through sustainable infrastructure.',
-      is_featured: true,
-    },
-    {
-      id: 'mock-2',
-      name: 'Youth Golf Education Fund',
-      description: 'Helping underprivileged youth access golf equipment, lessons, and mentorship programs to build character.',
-      is_featured: false,
-    },
-    {
-      id: 'mock-3',
-      name: 'Wildlife Preservation Trust',
-      description: 'Protecting endangered species and restoring critical natural habitats around the globe.',
-      is_featured: false,
-    }
+  if (q) {
+    query = query.ilike('name', `%${q}%`)
+  }
+
+  if (sort === 'az') {
+    query = query.order('name', { ascending: true })
+  } else if (sort === 'za') {
+    query = query.order('name', { ascending: false })
+  } else {
+    query = query.order('is_featured', { ascending: false }).order('name', { ascending: true })
+  }
+
+  const { data: charities } = await query
+
+  const mockCharities = [
+    { id: 'mock-1', name: 'Global Clean Water Initiative', description: 'Providing clean and safe drinking water to developing communities through sustainable infrastructure.', is_featured: true },
+    { id: 'mock-2', name: 'Youth Golf Education Fund', description: 'Helping underprivileged youth access golf equipment, lessons, and mentorship programs to build character.', is_featured: false },
+    { id: 'mock-3', name: 'Wildlife Preservation Trust', description: 'Protecting endangered species and restoring critical natural habitats around the globe.', is_featured: false }
   ]
+
+  let displayCharities = charities?.length ? charities : mockCharities
+
+  if (!charities?.length) {
+    const qLower = q.toLowerCase()
+    if (q) displayCharities = displayCharities.filter((c: any) => c.name.toLowerCase().includes(qLower))
+    if (sort === 'az') displayCharities.sort((a: any, b: any) => a.name.localeCompare(b.name))
+    if (sort === 'za') displayCharities.sort((a: any, b: any) => b.name.localeCompare(a.name))
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -58,9 +67,20 @@ export default async function CharitiesPage() {
           </p>
         </div>
 
+        {/* Search & Filter Bar */}
+        <form className="animate-fade-in delay-1" method="GET" action="/charities" style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '800px', marginBottom: '3rem', flexWrap: 'wrap' }}>
+          <input type="text" name="q" placeholder="Search charities..." defaultValue={q} style={{ flex: 1, minWidth: '200px', padding: '1rem', borderRadius: 'var(--radius-md)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'var(--foreground)' }} />
+          <select name="sort" defaultValue={sort} style={{ padding: '1rem', borderRadius: 'var(--radius-md)', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'var(--foreground)' }}>
+            <option value="featured">Featured First</option>
+            <option value="az">A-Z Name</option>
+            <option value="za">Z-A Name</option>
+          </select>
+          <button type="submit" className="btn btn-primary" style={{ padding: '0 2rem' }}>Filter</button>
+        </form>
+
         <div className="animate-fade-in delay-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', width: '100%' }}>
-          {displayCharities.map((charity) => (
-            <div key={charity.id} className="glass-panel" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+          {displayCharities.map((charity: any) => (
+            <Link href={`/charities/${charity.id}`} key={charity.id} className="glass-panel" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', textDecoration: 'none', color: 'inherit', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02) translateY(-4px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) translateY(0)'}>
               {charity.is_featured && (
                 <div style={{ position: 'absolute', top: 0, right: 0, padding: '0.25rem 1rem', background: 'var(--primary)', color: '#000', fontSize: '0.75rem', fontWeight: 600, borderBottomLeftRadius: 'var(--radius-md)' }}>
                   FEATURED
@@ -77,10 +97,10 @@ export default async function CharitiesPage() {
                 {charity.description || 'Dedicated to making a positive impact in the world through community-driven initiatives.'}
               </p>
               
-              <Link href="/subscribe" className="btn btn-secondary" style={{ textAlign: 'center', width: '100%', padding: '0.75rem' }}>
-                Support via Subscription
-              </Link>
-            </div>
+              <div className="btn btn-secondary" style={{ textAlign: 'center', width: '100%', padding: '0.75rem' }}>
+                View Profile & Support
+              </div>
+            </Link>
           ))}
         </div>
 

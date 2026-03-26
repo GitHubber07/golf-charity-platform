@@ -18,7 +18,16 @@ export default async function AdminDashboard() {
 
   // Fetch Admin Stats using supabaseAdmin to bypass RLS limits
   const { count: userCount } = await supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true })
-  const { count: subCount } = await supabaseAdmin.from('profiles').select('*', { count: 'exact', head: true }).eq('subscription_status', 'active')
+  const { data: activeProfiles } = await supabaseAdmin.from('profiles').select('charity_percentage').eq('subscription_status', 'active')
+  
+  const subCount = activeProfiles?.length || 0
+
+  let monthlyCharityTotal = 0
+  activeProfiles?.forEach(p => {
+    monthlyCharityTotal += (15.0 * ((p.charity_percentage || 10) / 100))
+  })
+  
+  const monthlyPrizePool = subCount * 10.0 // The remaining $10 from the $15 subscription
   
   const { data: draws } = await supabaseAdmin.from('draws').select('*').order('created_at', { ascending: false }).limit(10)
 
@@ -37,7 +46,9 @@ export default async function AdminDashboard() {
           <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ef4444' }}></div>
           Admin Control
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Link href="/admin/users" className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>Manage Users</Link>
+          <Link href="/admin/charities" className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>Manage Charities</Link>
           <Link href="/dashboard" className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>User View</Link>
           <form action={signOut}>
             <button className="btn btn-primary" style={{ padding: '0.5rem 1rem', background: '#eab308', color: '#000', border: 'none' }}>Sign Out</button>
@@ -50,7 +61,7 @@ export default async function AdminDashboard() {
         {/* KPI Panel */}
         <section className="glass-panel" style={{ padding: '2rem' }}>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Platform Stats</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
             <div style={{ padding: '1.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
               <div style={{ fontSize: '0.875rem', color: '#a1a1aa', marginBottom: '0.5rem' }}>Total Users</div>
               <div style={{ fontSize: '2rem', fontWeight: 700 }}>{userCount || 0}</div>
@@ -58,6 +69,14 @@ export default async function AdminDashboard() {
             <div style={{ padding: '1.5rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
               <div style={{ fontSize: '0.875rem', color: 'var(--accent)', marginBottom: '0.5rem' }}>Active Subs</div>
               <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent)' }}>{subCount || 0}</div>
+            </div>
+            <div style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <div style={{ fontSize: '0.875rem', color: '#60a5fa', marginBottom: '0.5rem' }}>Monthly Charity Gen</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#60a5fa' }}>${monthlyCharityTotal.toFixed(2)}</div>
+            </div>
+            <div style={{ padding: '1.5rem', background: 'rgba(234, 179, 8, 0.1)', borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+              <div style={{ fontSize: '0.875rem', color: '#eab308', marginBottom: '0.5rem' }}>Monthly Prize Pool</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: '#eab308' }}>${monthlyPrizePool.toFixed(2)}</div>
             </div>
           </div>
         </section>

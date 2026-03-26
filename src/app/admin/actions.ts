@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 function calculateMatches(userScores: number[], winningNumbers: number[]) {
   return winningNumbers.filter(n => userScores.includes(n)).length
@@ -145,4 +146,116 @@ export async function updateWinningStatus(formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/admin')
+}
+
+export async function createCharity(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Unauthorized')
+
+  const { supabaseAdmin } = await import('@/utils/supabase/admin')
+
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const is_featured = formData.get('is_featured') === 'on'
+  const active = formData.get('active') === 'on'
+
+  if (!name) throw new Error('Name is required')
+
+  const { error } = await supabaseAdmin.from('charities').insert({ name, description, is_featured, active })
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/charities')
+  revalidatePath('/charities')
+  redirect('/admin/charities?msg=success')
+}
+
+export async function updateCharity(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Unauthorized')
+
+  const { supabaseAdmin } = await import('@/utils/supabase/admin')
+
+  const id = formData.get('id') as string
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const is_featured = formData.get('is_featured') === 'on'
+  const active = formData.get('active') === 'on'
+
+  if (!id || !name) throw new Error('ID and Name are required')
+
+  const { error } = await supabaseAdmin.from('charities').update({ name, description, is_featured, active }).eq('id', id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/charities')
+  revalidatePath('/charities')
+  revalidatePath(`/charities/${id}`)
+  redirect('/admin/charities?msg=success')
+}
+
+export async function deleteCharity(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Unauthorized')
+
+  const { supabaseAdmin } = await import('@/utils/supabase/admin')
+
+  const id = formData.get('id') as string
+  if (!id) throw new Error('ID required')
+
+  const { error } = await supabaseAdmin.from('charities').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/charities')
+  revalidatePath('/charities')
+  redirect('/admin/charities?msg=success')
+}
+
+export async function adminUpdateUserSub(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Unauthorized')
+
+  const { supabaseAdmin } = await import('@/utils/supabase/admin')
+
+  const targetUserId = formData.get('userId') as string
+  const subStatus = formData.get('subscription_status') as string
+
+  if (!targetUserId) throw new Error('User ID required')
+
+  const { error } = await supabaseAdmin.from('profiles').update({ subscription_status: subStatus }).eq('id', targetUserId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/users')
+  redirect('/admin/users?msg=success')
+}
+
+export async function adminUpdateUserScore(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Unauthorized')
+
+  const { supabaseAdmin } = await import('@/utils/supabase/admin')
+
+  const scoreId = formData.get('scoreId') as string
+  const scoreValue = parseInt(formData.get('score') as string, 10)
+  
+  if (!scoreId || isNaN(scoreValue)) throw new Error('Invalid input')
+
+  const { error } = await supabaseAdmin.from('scores').update({ score: scoreValue }).eq('id', scoreId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/users')
+  redirect('/admin/users?msg=success')
 }

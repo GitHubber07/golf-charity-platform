@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { addScore, updateCharityPreferences, signOut, submitWinningProof } from './actions'
+import { addScore, updateScore, updateCharityPreferences, signOut, submitWinningProof } from './actions'
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const params = await searchParams
@@ -91,6 +91,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section className="glass-panel" style={{ padding: '2rem', borderTop: '4px solid var(--primary)' }}>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Recent Scores (Stableford)</h2>
           <p style={{ fontSize: '0.875rem', color: '#a1a1aa', marginBottom: '1.5rem' }}>Your 5 most recent scores act as your unique lottery numbers for the monthly prize draws. Play well!</p>
+          
+          {!isSubscribed && (
+            <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.875rem' }}>
+              <strong>Action Required:</strong> An active subscription is required to add or edit your scores.
+            </div>
+          )}
+          
           {params?.updated === 'score' && (
             <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--accent)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '0.875rem' }}>
               ✓ Score successfully added to your history!
@@ -107,9 +114,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <p style={{ textAlign: 'center', padding: '1rem', color: '#a1a1aa' }}>No scores entered yet.</p>
             ) : (
               scores?.map((s) => (
-                <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{s.score} pts</span>
-                  <span style={{ color: '#a1a1aa' }}>{new Date(s.date_played).toLocaleDateString()}</span>
+                <div key={s.id} className="hover-scale" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', cursor: 'default' }}>
+                  {params?.edit === s.id ? (
+                    <form action={updateScore} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <input type="hidden" name="scoreId" value={s.id} />
+                      <input type="number" name="score" min="1" max="45" defaultValue={s.score} required style={{ flex: 1, minWidth: '80px', padding: '0.5rem', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--primary)', color: '#fff' }} />
+                      <input type="date" name="date" defaultValue={s.date_played} required style={{ flex: 1, minWidth: '130px', padding: '0.5rem', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--primary)', color: '#fff' }} />
+                      <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }}>Save</button>
+                      <Link href="/dashboard" className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>Cancel</Link>
+                    </form>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: 'var(--primary)', marginRight: '1rem' }}>{s.score} pts</span>
+                        <span style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>{new Date(s.date_played).toLocaleDateString()}</span>
+                      </div>
+                      {isSubscribed && (
+                        <Link href={`/dashboard?edit=${s.id}`} style={{ fontSize: '0.875rem', color: '#a1a1aa', textDecoration: 'underline' }}>Edit</Link>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -142,6 +166,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </form>
         </section>
 
+        {/* Participation Summary */}
+        <section className="glass-panel" style={{ padding: '2rem' }}>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Draw Participation</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+               <span style={{ color: '#a1a1aa' }}>Upcoming Draw</span>
+               <span style={{ fontWeight: 600, color: 'var(--primary)' }}>End of {new Date().toLocaleString('default', { month: 'long' })}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+               <span style={{ color: '#a1a1aa' }}>Eligibility Status</span>
+               {isSubscribed && (scores?.length || 0) >= 5 ? (
+                 <span style={{ fontWeight: 600, color: 'var(--accent)' }}>Eligible (5/5 scores logs)</span>
+               ) : (
+                 <span style={{ fontWeight: 600, color: '#ef4444' }}>Not Eligible (Action Required)</span>
+               )}
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#a1a1aa', marginTop: '0.5rem' }}>
+              To participate in upcoming monthly draws, you must maintain an active subscription and have at least 5 scores logged.
+            </p>
+          </div>
+        </section>
+
         {/* Winnings Overview */}
         <section className="glass-panel" style={{ padding: '2rem', borderTop: '4px solid #eab308' }}>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Prize Winnings</h2>
@@ -167,10 +213,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   </div>
 
                   {w.status === 'pending' && !w.proof_url && (
-                    <form action={submitWinningProof} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <form action={submitWinningProof} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                       <input type="hidden" name="winningId" value={w.id} />
-                      <input type="url" name="proofUrl" placeholder="Screenshot URL (e.g., imgur link)" required style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--border)', color: '#fff', fontSize: '0.875rem' }} />
-                      <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', color: '#000' }}>Submit Proof</button>
+                      <input type="file" name="proofFile" accept="image/*" required style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--border)', color: '#fff', fontSize: '0.875rem' }} />
+                      <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', color: '#000' }}>Upload Proof</button>
                     </form>
                   )}
                   {w.status === 'pending' && w.proof_url && (
